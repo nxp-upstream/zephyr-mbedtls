@@ -63,6 +63,24 @@
 #include "cc3xx.h"
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
 
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+#ifndef PSA_CRYPTO_DRIVER_PRESENT
+#define PSA_CRYPTO_DRIVER_PRESENT
+#endif
+#ifndef PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT
+#define PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT
+#endif
+#include "Hse_Ip.h"
+#include "pse_hse_init.h"
+#include "nxp_hse_psa_crypto_keys.h"
+#include "nxp_hse_psa_crypto_aead.h"
+#include "nxp_hse_psa_crypto_rsa.h"
+#include "nxp_hse_psa_crypto_aes.h"
+#include "nxp_hse_psa_crypto_hash.h"
+#include "nxp_hse_psa_crypto_sign_verify.h"
+#include "nxp_hse_psa_crypto_mac.h"
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
+
 /* END-driver headers */
 
 /* Auto-generated values depending on which drivers are registered.
@@ -80,6 +98,9 @@ enum {
 #if defined(PSA_CRYPTO_DRIVER_CC3XX)
     PSA_CRYPTO_CC3XX_DRIVER_ID,
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    PSA_CRYPTO_NXP_HSE_DRIVER_ID,
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
 };
 
 /* END-driver id */
@@ -126,6 +147,12 @@ static inline psa_status_t psa_driver_wrapper_init( void )
 
 #if defined(PSA_CRYPTO_DRIVER_CC3XX)
     status = cc3xx_init();
+    if (status != PSA_SUCCESS)
+        return ( status );
+#endif
+
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    status = psa_crypto_hse_init();
     if (status != PSA_SUCCESS)
         return ( status );
 #endif
@@ -235,6 +262,20 @@ static inline psa_status_t psa_driver_wrapper_sign_message(
                 return( status );
             break;
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_sign_message(attributes,
+                                                    key_buffer,
+                                                    key_buffer_size,
+                                                    alg,
+                                                    input,
+                                                    input_length,
+                                                    signature,
+                                                    signature_size,
+                                                    signature_length );
+        	return status;
+        break;
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -319,6 +360,19 @@ static inline psa_status_t psa_driver_wrapper_verify_message(
                 return( status );
             break;
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_verify_message(attributes,
+                                                    key_buffer,
+                                                    key_buffer_size,
+                                                    alg,
+                                                    input,
+                                                    input_length,
+                                                    signature,
+                                                    signature_length );
+        	return status;
+        break;
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -438,6 +492,18 @@ static inline psa_status_t psa_driver_wrapper_sign_hash(
                                                              signature_size,
                                                              signature_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status=nxp_hse_psa_opaque_signature_sign_hash(attributes,
+                                                          key_buffer,
+                                                          key_buffer_size,
+                                                          alg,
+                                                          hash,
+                                                          hash_length,
+                                                          signature,signature_size,
+                                                          signature_length );
+            return (status);
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -553,6 +619,18 @@ static inline psa_status_t psa_driver_wrapper_verify_hash(
                                                                signature,
                                                                signature_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status=nxp_hse_psa_opaque_signature_verify_hash(attributes,
+                                                            key_buffer,
+                                                            key_buffer_size,
+                                                            alg,
+                                                            hash,
+                                                            hash_length,
+                                                            signature,
+                                                            signature_length );
+        	return (status);
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -648,7 +726,12 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_start(
             break;
 
             /* Add cases for opaque driver here */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+            status = PSA_ERROR_NOT_SUPPORTED;  /* Streaming mode for ECDSA is not supported in HSE */
+            break;
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
         default:
             /* Key is declared with a lifetime not known to us */
             status = PSA_ERROR_INVALID_ARGUMENT;
@@ -675,6 +758,11 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_complete(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return PSA_ERROR_NOT_SUPPORTED;  /* Streaming mode for ECDSA is not supported in HSE */
+            break;
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -698,6 +786,11 @@ static inline psa_status_t psa_driver_wrapper_sign_hash_abort(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return PSA_ERROR_NOT_SUPPORTED;  /* Streaming mode for ECDSA is not supported in HSE */
+            break;
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -744,7 +837,12 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_start(
             break;
 
             /* Add cases for opaque driver here */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+            status = PSA_ERROR_NOT_SUPPORTED;  /* Streaming mode for ECDSA is not supported in HSE */
+            break;
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
         default:
             /* Key is declared with a lifetime not known to us */
             status = PSA_ERROR_INVALID_ARGUMENT;
@@ -769,6 +867,11 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_complete(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return PSA_ERROR_NOT_SUPPORTED;  /* Streaming mode for ECDSA is not supported in HSE */
+            break;
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -789,6 +892,11 @@ static inline psa_status_t psa_driver_wrapper_verify_hash_abort(
             /* Add test driver tests here */
 
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return PSA_ERROR_NOT_SUPPORTED;  /* Streaming mode for ECDSA is not supported in HSE */
+            break;
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -827,7 +935,13 @@ static inline psa_status_t psa_driver_wrapper_get_key_buffer_size_from_key_data(
             return( ( *key_buffer_size != 0 ) ?
                     PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            *key_buffer_size =nxp_hse_psa_opaque_size_function(key_type,PSA_BYTES_TO_BITS(data_length ));
+            return ((*key_buffer_size !=0) ?
+                   PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
+        break;
+#endif
         default:
             (void)key_type;
             (void)data;
@@ -940,11 +1054,51 @@ static inline psa_status_t psa_driver_wrapper_generate_key(
                 attributes, key_buffer, key_buffer_size, key_buffer_length );
             break;
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_generate_key(
+                                        attributes, custom, custom_data_length,
+                                        key_buffer, key_buffer_size, key_buffer_length);
+        break;
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:
             /* Key is declared with a lifetime not known to us */
             status = PSA_ERROR_INVALID_ARGUMENT;
+            break;
+    }
+
+    return( status );
+}
+
+/* This is a temporary placeholder for destroy till full stateful destroy is added in upstream */
+static inline psa_status_t psa_driver_wrapper_destroy_key(
+    const psa_key_attributes_t *attributes,
+    uint8_t *key_buffer, size_t key_buffer_size)
+{
+    psa_status_t status = PSA_ERROR_CORRUPTION_DETECTED;
+    psa_key_location_t location =
+        PSA_KEY_LIFETIME_GET_LOCATION(psa_get_key_lifetime(attributes));
+
+    switch( location )
+    {
+        /* Add cases for opaque driver here */
+#if defined(PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT)
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status=nxp_hse_psa_destroy_key(attributes, key_buffer, key_buffer_size);
+            if(status !=PSA_SUCCESS)
+            {
+                return status;
+            }
+#endif
+#endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
+
+        /* Drivers which may not have any state to change for destruction of key */
+        default:
+            status = PSA_SUCCESS;
             break;
     }
 
@@ -1058,6 +1212,19 @@ static inline psa_status_t psa_driver_wrapper_import_key(
         ));
 #endif
 
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_import_key
+                     (attributes,
+                      data,
+                      data_length,
+                      key_buffer,
+                      key_buffer_size,
+                      key_buffer_length,
+                      bits);
+            if ( status != PSA_ERROR_NOT_SUPPORTED )
+                return( status );
+#endif
 
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
@@ -1126,7 +1293,16 @@ static inline psa_status_t psa_driver_wrapper_export_key(
         ));
 #endif
 
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            return(nxp_hse_psa_export_key(attributes,
+                                          key_buffer,
+                                          key_buffer_size,
+                                          data,
+                                          data_size,
+                                          data_length
+                                          ));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -1173,7 +1349,17 @@ static inline psa_status_t psa_driver_wrapper_copy_key(
         ));
 #endif
 
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            return( nxp_hse_psa_test_opaque_copy_key
+                        (attributes,
+                         source_key,
+                         source_key_length,
+                         target_key_buffer,
+                         target_key_buffer_size,
+                         target_key_buffer_length
+                    ));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void)source_key;
@@ -1280,6 +1466,21 @@ static inline psa_status_t psa_driver_wrapper_cipher_encrypt(
                                                         output_size,
                                                         output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_cipher_encrypt(attributes,
+                                                key_buffer,
+                                                key_buffer_size,
+                                                alg,
+                                                iv,
+                                                iv_length,
+                                                input,
+                                                input_length,
+                                                output,
+                                                output_size,
+                                                output_length );
+            return(status);
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:
@@ -1379,6 +1580,19 @@ static inline psa_status_t psa_driver_wrapper_cipher_decrypt(
                                                         output_size,
                                                         output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+         case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_cipher_decrypt(attributes,
+                                                       key_buffer,
+                                                       key_buffer_size,
+                                                       alg,
+                                                       input,
+                                                       input_length,
+                                                       output,
+                                                       output_size,
+                                                       output_length );
+            return(status);
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:
@@ -1470,6 +1684,19 @@ static inline psa_status_t psa_driver_wrapper_cipher_encrypt_setup(
 
             return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_cipher_encrypt_setup(&operation->ctx.nxp_hse_driver_cipher_ctx,
+                                                             attributes,
+                                                             key_buffer,
+                                                             key_buffer_size,
+                                                             alg );
+            if( status == PSA_SUCCESS )
+                operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+
+            return( status );
+#endif /*PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -1556,6 +1783,17 @@ static inline psa_status_t psa_driver_wrapper_cipher_decrypt_setup(
 
             return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_opaque_cipher_decrypt_setup(
+                     &operation->ctx.nxp_hse_driver_cipher_ctx,
+                     attributes,
+                     key_buffer, key_buffer_size,
+                     alg);
+            if (status == PSA_SUCCESS)
+                operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+            return( status );
+#endif  /*PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -1600,6 +1838,12 @@ static inline psa_status_t psa_driver_wrapper_cipher_set_iv(
                         &operation->ctx.cc3xx_driver_ctx,
                         iv, iv_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_opaque_cipher_set_iv(
+                   &operation->ctx.nxp_hse_driver_cipher_ctx,
+                   iv, iv_length));
+#endif  /*PSA_CRYPTO_DRIVER_NXP_HSE*/
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -1650,6 +1894,15 @@ static inline psa_status_t psa_driver_wrapper_cipher_update(
                         input, input_length,
                         output, output_size, output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return (nxp_hse_psa_opaque_cipher_update( &operation->ctx.nxp_hse_driver_cipher_ctx,
+                                                input,
+                                                input_length,
+                                                output,
+                                                output_size,
+                                                output_length ));
+#endif /*PSA_CRYPTO_DRIVER_NXP_HSE*/
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -1696,6 +1949,13 @@ static inline psa_status_t psa_driver_wrapper_cipher_finish(
                         &operation->ctx.cc3xx_driver_ctx,
                         output, output_size, output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX*/
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return (nxp_hse_psa_opaque_cipher_finish(&operation->ctx.nxp_hse_driver_cipher_ctx,
+                                                     output,
+                                                     output_size,
+                                                     output_length ));
+#endif /*PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -1745,6 +2005,12 @@ static inline psa_status_t psa_driver_wrapper_cipher_abort(
                 sizeof( operation->ctx.cc3xx_driver_ctx ) );
             return( status );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            status = nxp_hse_psa_opaque_cipher_abort(&operation->ctx.nxp_hse_driver_cipher_ctx);
+            mbedtls_platform_zeroize(&operation->ctx.nxp_hse_driver_cipher_ctx,sizeof(operation->ctx.nxp_hse_driver_cipher_ctx));
+            return (status);
+#endif /*PSA_CRYPTO_DRIVER_NXP_HSE*/
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -1778,6 +2044,12 @@ static inline psa_status_t psa_driver_wrapper_hash_compute(
             hash_length);
     return status;
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    status = nxp_hse_psa_hash_compute(
+                alg, input, input_length, hash, hash_size, hash_length );
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
     /* If software fallback is compiled in, try fallback */
@@ -1820,6 +2092,13 @@ static inline psa_status_t psa_driver_wrapper_hash_setup(
     operation->id = PSA_CRYPTO_CC3XX_DRIVER_ID;
     return( status );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    status= nxp_hse_psa_hash_setup(&operation->ctx.hse_driver_ctx,alg);
+    if(status == PSA_SUCCESS)
+        operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+    if( status != PSA_ERROR_NOT_SUPPORTED )
+        return( status );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
     /* If software fallback is compiled in, try fallback */
@@ -1866,6 +2145,12 @@ static inline psa_status_t psa_driver_wrapper_hash_clone(
                         &target_operation->ctx.cc3xx_driver_ctx ) );
 
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            target_operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+            return(nxp_hse_psa_hash_clone( &source_operation->ctx.mbedtls_ctx,
+                                            &target_operation->ctx.mbedtls_ctx ) );
+#endif  /*PSA_CRYPTO_DRIVER_NXP_HSE*/
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) target_operation;
@@ -1898,6 +2183,11 @@ static inline psa_status_t psa_driver_wrapper_hash_update(
                         &operation->ctx.cc3xx_driver_ctx,
                         input, input_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_hash_update(&operation->ctx.hse_driver_ctx,
+                                            input,input_length) );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) input;
@@ -1932,6 +2222,11 @@ static inline psa_status_t psa_driver_wrapper_hash_finish(
                         &operation->ctx.cc3xx_driver_ctx,
                         hash, hash_size, hash_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_hash_finish(&operation->ctx.hse_driver_ctx,
+                                           hash, hash_size, hash_length));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) hash;
@@ -1961,6 +2256,11 @@ static inline psa_status_t psa_driver_wrapper_hash_abort(
             return( cc3xx_hash_abort(
                         &operation->ctx.cc3xx_driver_ctx ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined (PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_hash_abort(
+                   &operation->ctx.hse_driver_ctx));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             return( PSA_ERROR_BAD_STATE );
@@ -2025,7 +2325,16 @@ static inline psa_status_t psa_driver_wrapper_aead_encrypt(
                         ciphertext, ciphertext_size, ciphertext_length ) );
 
         /* Add cases for opaque driver here */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            return( nxp_hse_psa_aead_encrypt(
+                                    attributes, key_buffer, key_buffer_size,
+                                    alg,
+                                    nonce, nonce_length,
+                                    additional_data, additional_data_length,
+                                    plaintext, plaintext_length,
+                                    ciphertext, ciphertext_size, ciphertext_length ) );
+#endif
         default:
             /* Key is declared with a lifetime not known to us */
             (void)status;
@@ -2091,7 +2400,16 @@ static inline psa_status_t psa_driver_wrapper_aead_decrypt(
                         plaintext, plaintext_size, plaintext_length ) );
 
         /* Add cases for opaque driver here */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            return( nxp_hse_psa_aead_decrypt(
+                    attributes, key_buffer, key_buffer_size,
+                    alg,
+                    nonce, nonce_length,
+                    additional_data, additional_data_length,
+                    ciphertext, ciphertext_length,
+                    plaintext, plaintext_size, plaintext_length ) );
+#endif
         default:
             /* Key is declared with a lifetime not known to us */
             (void)status;
@@ -2151,7 +2469,15 @@ static inline psa_status_t psa_driver_wrapper_aead_encrypt_setup(
             return( status );
 
         /* Add cases for opaque driver here */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+                        status = nxp_hse_psa_aead_encrypt_setup(
+                                    &operation->ctx.nxp_hse_psa_ctx, attributes,
+                                    key_buffer, key_buffer_size,
+                                    alg );
+            return (status);
+#endif
         default:
             /* Key is declared with a lifetime not known to us */
             (void)status;
@@ -2214,7 +2540,15 @@ static inline psa_status_t psa_driver_wrapper_aead_decrypt_setup(
             return( status );
 
         /* Add cases for opaque driver here */
-
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+            status = nxp_hse_psa_aead_decrypt_setup(
+                                    &operation->ctx.nxp_hse_psa_ctx, attributes,
+                                    key_buffer, key_buffer_size,
+                                    alg );
+            return (status);
+#endif
         default:
             /* Key is declared with a lifetime not known to us */
             (void)status;
@@ -2253,6 +2587,12 @@ static inline psa_status_t psa_driver_wrapper_aead_set_nonce(
                         &operation->ctx.cc3xx_driver_ctx,
                         nonce, nonce_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_aead_set_nonce(&operation->ctx.nxp_hse_psa_ctx,
+                                              nonce,
+                                              nonce_length ) );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -2293,6 +2633,12 @@ static inline psa_status_t psa_driver_wrapper_aead_set_lengths(
                     &operation->ctx.cc3xx_driver_ctx,
                     ad_length, plaintext_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return( nxp_hse_psa_aead_set_lengths( &operation->ctx.nxp_hse_psa_ctx,
+                                                              ad_length,
+                                                              plaintext_length ) );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -2333,6 +2679,12 @@ static inline psa_status_t psa_driver_wrapper_aead_update_ad(
                     &operation->ctx.cc3xx_driver_ctx,
                     input, input_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return( nxp_hse_psa_aead_update_ad( &operation->ctx.nxp_hse_psa_ctx,
+                                                            input,
+                                                            input_length ) );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -2379,6 +2731,13 @@ static inline psa_status_t psa_driver_wrapper_aead_update(
                     input, input_length, output, output_size,
                     output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return( nxp_hse_psa_aead_update( &operation->ctx.nxp_hse_psa_ctx,
+                                                         input, input_length,
+                                                         output, output_size,
+                                                         output_length ) );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -2430,6 +2789,14 @@ static inline psa_status_t psa_driver_wrapper_aead_finish(
                     ciphertext, ciphertext_size,
                     ciphertext_length, tag, tag_size, tag_length ) );
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return( nxp_hse_psa_aead_finish( &operation->ctx.nxp_hse_psa_ctx,
+                                            ciphertext,
+                                            ciphertext_size,
+                                            ciphertext_length, tag,
+                                            tag_size, tag_length ) );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
     }
 
@@ -2608,6 +2975,14 @@ static inline psa_status_t psa_driver_wrapper_mac_compute(
                 mac, mac_size, mac_length );
             return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status=nxp_hse_psa_crypto_opaque_mac_compute(
+                    attributes,key_buffer,key_buffer_size,alg,
+                    input,input_length,
+                    mac, mac_size, mac_length );
+            return(status);
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -2696,6 +3071,18 @@ static inline psa_status_t psa_driver_wrapper_mac_sign_setup(
 
             return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status=nxp_hse_psa_opaque_mac_sign_setup(
+                     &operation->ctx.nxp_hse_psa_ctx,
+                     attributes,
+                     key_buffer,key_buffer_size,alg);
+            if( status == PSA_SUCCESS )
+                operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+                return( status );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -2780,6 +3167,18 @@ static inline psa_status_t psa_driver_wrapper_mac_verify_setup(
 
             return( status );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status=nxp_hse_psa_opaque_mac_verify_setup(
+                    &operation->ctx.nxp_hse_psa_ctx,
+					attributes,
+					key_buffer,key_buffer_size,alg);
+            if( status == PSA_SUCCESS )
+                operation->id = PSA_CRYPTO_NXP_HSE_DRIVER_ID;
+
+            if( status != PSA_ERROR_NOT_SUPPORTED )
+                return( status );
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             /* Key is declared with a lifetime not known to us */
@@ -2821,6 +3220,12 @@ static inline psa_status_t psa_driver_wrapper_mac_update(
         case PSA_CRYPTO_CC3XX_DRIVER_ID:
             return(cc3xx_mac_update(&operation->ctx.cc3xx_driver_ctx, input, input_length));
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_opaque_mac_update(
+                    &operation->ctx.nxp_hse_psa_ctx,
+                    input, input_length));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) input;
@@ -2860,6 +3265,11 @@ static inline psa_status_t psa_driver_wrapper_mac_sign_finish(
             return(cc3xx_mac_sign_finish(&operation->ctx.cc3xx_driver_ctx,
                         mac, mac_size, mac_length));
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_opaque_mac_sign_finish(&operation->ctx.nxp_hse_psa_ctx,
+                    mac,mac_size,mac_length));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) mac;
@@ -2900,6 +3310,11 @@ static inline psa_status_t psa_driver_wrapper_mac_verify_finish(
                         &operation->ctx.cc3xx_driver_ctx,
                         mac, mac_length));
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_mac_verify_finish(&operation->ctx.nxp_hse_psa_ctx,
+                                    mac, mac_length ));
+#endif  /*PSA_CRYPTO_DRIVER_NXP_HSE*/
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             (void) mac;
@@ -2931,6 +3346,10 @@ static inline psa_status_t psa_driver_wrapper_mac_abort(
         case PSA_CRYPTO_CC3XX_DRIVER_ID:
             return(cc3xx_mac_abort(&operation->ctx.cc3xx_driver_ctx));
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_CRYPTO_NXP_HSE_DRIVER_ID:
+            return(nxp_hse_psa_mac_abort(&operation->ctx.nxp_hse_psa_ctx));
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
             return( PSA_ERROR_INVALID_ARGUMENT );
@@ -2996,6 +3415,13 @@ static inline psa_status_t psa_driver_wrapper_asymmetric_encrypt(
                         salt, salt_length, output, output_size, output_length )
                   );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            return( nxp_hse_psa_opaque_asymmetric_encrypt( attributes,
+                                    key_buffer, key_buffer_size, alg, input, input_length,
+                                    salt, salt_length, output, output_size, output_length )
+                              );
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:
@@ -3071,6 +3497,13 @@ static inline psa_status_t psa_driver_wrapper_asymmetric_decrypt(
                         salt, salt_length, output, output_size,
                         output_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            return( nxp_hse_psa_opaque_asymmetric_decrypt( attributes,
+                                    key_buffer, key_buffer_size, alg, input, input_length,
+                                    salt, salt_length, output, output_size, output_length )
+                          );
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:
@@ -3176,6 +3609,19 @@ static inline psa_status_t psa_driver_wrapper_key_agreement(
                         peer_key_length, shared_secret, shared_secret_size,
                         shared_secret_length ) );
 #endif /* PSA_CRYPTO_DRIVER_TEST */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            status = nxp_hse_psa_key_agreement_raw_builtin( attributes,
+                                                    key_buffer,
+                                                    key_buffer_size,
+                                                    alg,
+                                                    peer_key,
+                                                    peer_key_length,
+                                                    shared_secret,
+                                                    shared_secret_size,
+                                                    shared_secret_length );
+        	return( status);
+#endif
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
 
         default:

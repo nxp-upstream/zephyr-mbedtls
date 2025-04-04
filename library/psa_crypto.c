@@ -1386,6 +1386,13 @@ psa_status_t psa_destroy_key(mbedtls_svc_key_id_t key)
     }
 #endif /* MBEDTLS_PSA_CRYPTO_SE_C */
 
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    status=psa_driver_wrapper_destroy_key(&slot->attr,slot->key.data,slot->key.bytes);
+    if (status != PSA_SUCCESS) {
+        goto exit;
+    }
+#endif
+
 #if defined(MBEDTLS_PSA_CRYPTO_STORAGE_C)
     if (!PSA_KEY_LIFETIME_IS_VOLATILE(slot->attr.lifetime)) {
         /* Destroy the copy of the persistent key from storage.

@@ -979,6 +979,12 @@ psa_status_t psa_validate_key_persistence(psa_key_lifetime_t lifetime)
             return PSA_SUCCESS;
         }
 #else /* MBEDTLS_PSA_CRYPTO_STORAGE_C */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    if (PSA_KEY_LIFETIME_GET_PERSISTENCE(lifetime) == PSA_KEY_LIFETIME_PERSISTENT) {
+            /* Volatile keys are always supported */
+            return PSA_SUCCESS;
+        }                                                       //Dummy implementation in case of HSE
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
         return PSA_ERROR_NOT_SUPPORTED;
 #endif /* !MBEDTLS_PSA_CRYPTO_STORAGE_C */
     }

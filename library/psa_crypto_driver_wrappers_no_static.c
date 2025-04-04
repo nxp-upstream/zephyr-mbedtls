@@ -62,6 +62,16 @@
 #include "cc3xx.h"
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
 
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+#ifndef PSA_CRYPTO_DRIVER_PRESENT
+#define PSA_CRYPTO_DRIVER_PRESENT
+#endif
+#ifndef PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT
+#define PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT
+#endif
+#include "nxp_hse_psa_crypto_keys.h"
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
+
 /* END-driver headers */
 
 /* Auto-generated values depending on which drivers are registered.
@@ -79,6 +89,9 @@ enum {
 #if defined(PSA_CRYPTO_DRIVER_CC3XX)
     PSA_CRYPTO_CC3XX_DRIVER_ID,
 #endif /* PSA_CRYPTO_DRIVER_CC3XX */
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+    PSA_CRYPTO_NXP_HSE_DRIVER_ID,
+#endif /* PSA_CRYPTO_DRIVER_NXP_HSE */
 };
 
 /* END-driver id */
@@ -146,6 +159,14 @@ psa_status_t psa_driver_wrapper_get_key_buffer_size(
             return tfm_builtin_key_loader_get_key_buffer_size(psa_get_key_id(attributes),
                                                               key_buffer_size);
 #endif /* PSA_CRYPTO_DRIVER_TFM_BUILTIN_KEY_LOADER */
+
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+            *key_buffer_size = nxp_hse_psa_opaque_size_function( key_type,
+                                                                  key_bits );
+            return( ( *key_buffer_size != 0 ) ?
+                    PSA_SUCCESS : PSA_ERROR_NOT_SUPPORTED );
+#endif
 
         default:
             (void)key_type;
@@ -259,6 +280,16 @@ psa_status_t psa_driver_wrapper_export_public_key(
         ));
 #endif
 
+#if defined(PSA_CRYPTO_DRIVER_NXP_HSE)
+        case PSA_KEY_LOCATION_HSE:
+        	status = (nxp_hse_psa_export_pub_key( attributes,
+												key_buffer,
+												key_buffer_size,
+												data,
+												data_size,
+												data_length ) );
+        	return status;
+#endif
 
 #endif /* PSA_CRYPTO_ACCELERATOR_DRIVER_PRESENT */
         default:
